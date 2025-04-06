@@ -1,0 +1,88 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auto Download Latest File</title>
+</head>
+<body>
+    <h1 id="file-name">Preparing to download file...</h1>
+    <script>
+        const apiUrl = 'https://api.github.com/repos/m00291/aglcobs/contents/ppt/';
+
+        // Function to fetch the list of files
+        async function fetchFileList() {
+            try {
+                const response = await fetch(apiUrl, {
+                    headers: {
+                        "Accept": "application/vnd.github.v3+json"
+                        // "Authorization": "token YOUR_PERSONAL_ACCESS_TOKEN" // Uncomment and add your token if needed
+                    }
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || `HTTP error! Status: ${response.status}`);
+                }
+
+                const files = await response.json();
+                return files;
+            } catch (error) {
+                console.error('Error fetching file list:', error);
+                handleError(error.message);
+                return [];
+            }
+        }
+
+        // Function to handle errors and update the UI
+        function handleError(errorMessage) {
+            const fileNameElement = document.getElementById('file-name');
+            if (errorMessage.includes("API rate limit exceeded")) {
+                fileNameElement.textContent = "Error: API rate limit exceeded. Please try again later or use authenticated requests.";
+            } else {
+                fileNameElement.textContent = `Error: ${errorMessage}`;
+            }
+        }
+
+        // Function to determine the latest file (e.g., by name or other criteria)
+        function getLatestFile(files) {
+            // Example: Sort files by name and get the last one
+            files.sort((a, b) => a.name.localeCompare(b.name));
+            return files[files.length - 1];
+        }
+
+        // Function to trigger the download
+        function downloadFile(url) {
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = ''; // Optional: specify a filename if you want
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+
+        // Main function to fetch and download the latest file
+        async function downloadLatestFile() {
+            const files = await fetchFileList();
+            if (files.length > 0) {
+                const latestFile = getLatestFile(files);
+                if (latestFile && latestFile.download_url) {
+                    // Update the H1 element with the file name
+                    document.getElementById('file-name').textContent = `Downloading: ${latestFile.name}`;
+                    downloadFile(latestFile.download_url);
+                } else {
+                    console.error('No valid file found to download.');
+                    document.getElementById('file-name').textContent = 'No valid file found to download.';
+                }
+            } else {
+                console.error('No files found in the directory.');
+                document.getElementById('file-name').textContent = 'No files found in the directory.';
+            }
+        }
+
+        // Trigger the download when the page loads
+        window.onload = function() {
+            downloadLatestFile();
+        };
+    </script>
+</body>
+</html>
